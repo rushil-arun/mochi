@@ -1,2 +1,2 @@
-# dl-project
-Fine-tuning lightweight foundation models to clean harmful prompts.
+# mochi
+**M**alicious **O**utput **C**uration for **H**igh-quality **I**njection-defense.
