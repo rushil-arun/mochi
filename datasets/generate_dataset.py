@@ -226,12 +226,12 @@ def run() -> None:
     print(f"[csv] Total input rows: {total_rows}", flush=True)
 
     output_fields = list(input_fields)
-    for field in ("defensive_variant_prompt", "row_type", "pair_id", "variant_index"):
+    for field in ("variant_group_id", "variant_index"):
         if field not in output_fields:
             output_fields.append(field)
 
-    kept_pairs = 0
-    skipped_pairs = 0
+    kept_prompts = 0
+    skipped_prompts = 0
     written_rows = 0
 
     with output_path.open("w", encoding="utf-8", newline="") as outfile:
@@ -255,7 +255,7 @@ def run() -> None:
                 if prompt:
                     non_empty.append((idx, prompt))
                 else:
-                    skipped_pairs += 1
+                    skipped_prompts += 1
                     print(
                         f"  [row {batch_start + idx + 1}] skipped: empty prompt",
                         flush=True,
@@ -276,7 +276,7 @@ def run() -> None:
                 )
                 print(f"  [batch] raw Claude output: {raw_response!r}", flush=True)
             except Exception as exc:
-                skipped_pairs += len(prompts)
+                skipped_prompts += len(prompts)
                 print(f"  [batch] ERROR: {exc}", flush=True)
                 continue
 
@@ -299,37 +299,38 @@ def run() -> None:
                     v for v in variants if v and not is_unchanged_output(source_prompt, v)
                 ]
                 if not valid_variants:
-                    skipped_pairs += 1
+                    skipped_prompts += 1
                     print(
                         f"  [row {global_row_idx + 1}] skipped: no valid transformed output",
                         flush=True,
                     )
                     continue
 
-                pair_id = str(global_row_idx + 1)
-                input_row = dict(row)
-                input_row["defensive_variant_prompt"] = ""
-                input_row["row_type"] = "input"
-                input_row["pair_id"] = pair_id
-                input_row["variant_index"] = ""
-                writer.writerow(input_row)
-                written_rows += 1
+                variant_group_id = str(global_row_idx + 1)
+                print(
+                    f"  [row {global_row_idx + 1}] writing {len(valid_variants)} variant row(s) with group_id={variant_group_id}",
+                    flush=True,
+                )
 
                 for v_idx, variant in enumerate(valid_variants, start=1):
-                    transformed_row = dict(row)
-                    transformed_row[args.prompt_column] = ""
-                    transformed_row["defensive_variant_prompt"] = variant
-                    transformed_row["row_type"] = "transformed"
-                    transformed_row["pair_id"] = pair_id
-                    transformed_row["variant_index"] = str(v_idx)
-                    writer.writerow(transformed_row)
+                    out_row = dict(row)
+                    out_row[args.prompt_column] = variant
+                    out_row["variant_group_id"] = variant_group_id
+                    out_row["variant_index"] = str(v_idx)
+                    if "source" in out_row:
+                        out_row["source"] = "Claude"
+                    writer.writerow(out_row)
                     written_rows += 1
+                    print(
+                        f"    [row {global_row_idx + 1}] wrote variant {v_idx}/{len(valid_variants)}",
+                        flush=True,
+                    )
 
                 outfile.flush()
                 os.fsync(outfile.fileno())
-                kept_pairs += 1
+                kept_prompts += 1
                 print(
-                    f"  [row {global_row_idx + 1}] kept: wrote input + {len(valid_variants)} variant row(s)",
+                    f"  [row {global_row_idx + 1}] kept: variants written={len(valid_variants)}",
                     flush=True,
                 )
 
@@ -339,8 +340,8 @@ def run() -> None:
     print("[done] Generation finished.", flush=True)
     print(f"Input CSV: {input_path}", flush=True)
     print(f"Output CSV: {output_path}", flush=True)
-    print(f"Pairs kept: {kept_pairs}", flush=True)
-    print(f"Pairs skipped: {skipped_pairs}", flush=True)
+    print(f"Prompts kept: {kept_prompts}", flush=True)
+    print(f"Prompts skipped: {skipped_prompts}", flush=True)
     print(f"Rows written: {written_rows}", flush=True)
 
 
