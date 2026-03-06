@@ -233,6 +233,7 @@ def run() -> None:
     kept_prompts = 0
     skipped_prompts = 0
     written_rows = 0
+    expected_rows = 0
 
     with output_path.open("w", encoding="utf-8", newline="") as outfile:
         writer = csv.DictWriter(outfile, fieldnames=output_fields)
@@ -308,7 +309,18 @@ def run() -> None:
 
                 variant_group_id = str(global_row_idx + 1)
                 print(
-                    f"  [row {global_row_idx + 1}] writing {len(valid_variants)} variant row(s) with group_id={variant_group_id}",
+                    f"  [row {global_row_idx + 1}] writing 1 input row + {len(valid_variants)} variant row(s) with group_id={variant_group_id}",
+                    flush=True,
+                )
+
+                input_row = dict(row)
+                input_row[args.prompt_column] = source_prompt
+                input_row["variant_group_id"] = variant_group_id
+                input_row["variant_index"] = "0"
+                writer.writerow(input_row)
+                written_rows += 1
+                print(
+                    f"    [row {global_row_idx + 1}] wrote input prompt as variant 0",
                     flush=True,
                 )
 
@@ -329,8 +341,9 @@ def run() -> None:
                 outfile.flush()
                 os.fsync(outfile.fileno())
                 kept_prompts += 1
+                expected_rows += len(valid_variants) + 1
                 print(
-                    f"  [row {global_row_idx + 1}] kept: variants written={len(valid_variants)}",
+                    f"  [row {global_row_idx + 1}] kept: rows written for group={len(valid_variants) + 1}",
                     flush=True,
                 )
 
@@ -343,6 +356,7 @@ def run() -> None:
     print(f"Prompts kept: {kept_prompts}", flush=True)
     print(f"Prompts skipped: {skipped_prompts}", flush=True)
     print(f"Rows written: {written_rows}", flush=True)
+    print(f"Expected rows from kept prompts: {expected_rows}", flush=True)
 
 
 if __name__ == "__main__":
