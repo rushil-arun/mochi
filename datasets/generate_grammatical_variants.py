@@ -205,6 +205,7 @@ def process_csv(input_path: str, output_path: str, prompt_column: str = None):
 
 
 def main():
+    global NUM_VARIANTS, BATCH_SIZE
     parser = argparse.ArgumentParser(
         description="Generate grammatical prompt variants using Claude API."
     )
@@ -215,7 +216,6 @@ def main():
     parser.add_argument("--batch",    type=int, default=BATCH_SIZE,   help=f"Prompts per API request (default: {BATCH_SIZE})")
     args = parser.parse_args()
 
-    global NUM_VARIANTS, BATCH_SIZE
     NUM_VARIANTS = args.variants
     BATCH_SIZE = args.batch
 
