@@ -113,6 +113,18 @@ def parse_args() -> argparse.Namespace:
         default=0.5,
         help="Delay between batches to reduce rate-limit pressure.",
     )
+    parser.add_argument(
+        "--start-index",
+        type=int,
+        default=0,
+        help="0-based inclusive start row index in the input CSV (default: 0).",
+    )
+    parser.add_argument(
+        "--end-index",
+        type=int,
+        default=None,
+        help="0-based exclusive end row index in the input CSV (default: end of file).",
+    )
     return parser.parse_args()
 
 
@@ -210,7 +222,9 @@ def run() -> None:
     print(f"[init] Output CSV: {output_path}", flush=True)
     print(f"[init] Model: {MODEL}", flush=True)
     print(f"[init] Variants per prompt: {args.variants}", flush=True)
-    print(f"[init] Batch size: {args.batch_size}", flush=True)
+    print(f"[init] Batch size (arg): {args.batch_size}", flush=True)
+    print(f"[init] Start index: {args.start_index}", flush=True)
+    print(f"[init] End index (exclusive): {args.end_index}", flush=True)
 
     with input_path.open("r", encoding="utf-8", newline="") as infile:
         reader = csv.DictReader(infile)
@@ -224,6 +238,43 @@ def run() -> None:
 
     total_rows = len(rows)
     print(f"[csv] Total input rows: {total_rows}", flush=True)
+
+    if args.start_index < 0:
+        raise ValueError("--start-index must be >= 0.")
+    if args.start_index > total_rows:
+        raise ValueError(
+            f"--start-index ({args.start_index}) exceeds total rows ({total_rows})."
+        )
+    if args.end_index is not None and args.end_index < 0:
+        raise ValueError("--end-index must be >= 0 when provided.")
+
+    bounded_end_index = total_rows if args.end_index is None else args.end_index
+    if bounded_end_index > total_rows:
+        print(
+            f"[csv] end-index {bounded_end_index} exceeds total rows; clamping to {total_rows}",
+            flush=True,
+        )
+        bounded_end_index = total_rows
+
+    if args.start_index >= bounded_end_index:
+        print(
+            f"[csv] Empty processing range: start_index={args.start_index}, end_index={bounded_end_index}",
+            flush=True,
+        )
+        bounded_rows: list[tuple[int, dict]] = []
+    else:
+        indexed_rows = list(enumerate(rows))
+        bounded_rows = indexed_rows[args.start_index:bounded_end_index]
+
+    bounded_total = len(bounded_rows)
+    effective_batch_size = args.batch_size
+    if effective_batch_size <= 0:
+        raise ValueError("--batch-size must be > 0 when provided.")
+    print(
+        f"[csv] Processing bounded range [{args.start_index}, {bounded_end_index}) -> {bounded_total} row(s)",
+        flush=True,
+    )
+    print(f"[csv] Effective batch size: {effective_batch_size}", flush=True)
 
     output_fields = list(input_fields)
     for field in ("variant_group_id", "variant_index"):
@@ -242,23 +293,26 @@ def run() -> None:
         os.fsync(outfile.fileno())
         print(f"[csv] Writing rows to: {output_path}", flush=True)
 
-        for batch_start in range(0, total_rows, args.batch_size):
-            batch_rows = rows[batch_start : batch_start + args.batch_size]
-            batch_end = min(batch_start + args.batch_size, total_rows)
+        for batch_start in range(0, bounded_total, effective_batch_size):
+            batch_items = bounded_rows[batch_start : batch_start + effective_batch_size]
+            batch_end = min(batch_start + effective_batch_size, bounded_total)
+            first_original_idx = batch_items[0][0] + 1
+            last_original_idx = batch_items[-1][0] + 1
             print(
-                f"[batch] Processing rows {batch_start + 1}-{batch_end}/{total_rows}",
+                f"[batch] Processing bounded rows {batch_start + 1}-{batch_end}/{bounded_total} "
+                f"(original rows {first_original_idx}-{last_original_idx})",
                 flush=True,
             )
 
             non_empty = []
-            for idx, row in enumerate(batch_rows):
+            for local_batch_idx, (original_idx, row) in enumerate(batch_items):
                 prompt = (row.get(args.prompt_column) or "").strip()
                 if prompt:
-                    non_empty.append((idx, prompt))
+                    non_empty.append((local_batch_idx, original_idx, row, prompt))
                 else:
                     skipped_prompts += 1
                     print(
-                        f"  [row {batch_start + idx + 1}] skipped: empty prompt",
+                        f"  [row {original_idx + 1}] skipped: empty prompt",
                         flush=True,
                     )
 
@@ -266,7 +320,7 @@ def run() -> None:
                 print("  [batch] skipped: no non-empty prompts", flush=True)
                 continue
 
-            indices, prompts = zip(*non_empty)
+            _, _, _, prompts = zip(*non_empty)
             print(f"  [batch] sending {len(prompts)} prompt(s) to Claude...", flush=True)
 
             try:
@@ -281,18 +335,16 @@ def run() -> None:
                 print(f"  [batch] ERROR: {exc}", flush=True)
                 continue
 
-            for local_result_idx, local_batch_idx in enumerate(indices):
-                global_row_idx = batch_start + local_batch_idx
-                row = batch_rows[local_batch_idx]
-                source_prompt = (row.get(args.prompt_column) or "").strip()
+            for local_result_idx, item in enumerate(non_empty):
+                _, original_idx, row, source_prompt = item
                 variants = batch_results.get(local_result_idx, [])
 
                 print(
-                    f"  [row {global_row_idx + 1}] input prompt: {source_prompt!r}",
+                    f"  [row {original_idx + 1}] input prompt: {source_prompt!r}",
                     flush=True,
                 )
                 print(
-                    f"  [row {global_row_idx + 1}] variants: {variants!r}",
+                    f"  [row {original_idx + 1}] variants: {variants!r}",
                     flush=True,
                 )
 
@@ -302,14 +354,14 @@ def run() -> None:
                 if not valid_variants:
                     skipped_prompts += 1
                     print(
-                        f"  [row {global_row_idx + 1}] skipped: no valid transformed output",
+                        f"  [row {original_idx + 1}] skipped: no valid transformed output",
                         flush=True,
                     )
                     continue
 
-                variant_group_id = str(global_row_idx + 1)
+                variant_group_id = str(original_idx + 1)
                 print(
-                    f"  [row {global_row_idx + 1}] writing 1 input row + {len(valid_variants)} variant row(s) with group_id={variant_group_id}",
+                    f"  [row {original_idx + 1}] writing 1 input row + {len(valid_variants)} variant row(s) with group_id={variant_group_id}",
                     flush=True,
                 )
 
@@ -320,7 +372,7 @@ def run() -> None:
                 writer.writerow(input_row)
                 written_rows += 1
                 print(
-                    f"    [row {global_row_idx + 1}] wrote input prompt as variant 0",
+                    f"    [row {original_idx + 1}] wrote input prompt as variant 0",
                     flush=True,
                 )
 
@@ -334,7 +386,7 @@ def run() -> None:
                     writer.writerow(out_row)
                     written_rows += 1
                     print(
-                        f"    [row {global_row_idx + 1}] wrote variant {v_idx}/{len(valid_variants)}",
+                        f"    [row {original_idx + 1}] wrote variant {v_idx}/{len(valid_variants)}",
                         flush=True,
                     )
 
@@ -343,11 +395,11 @@ def run() -> None:
                 kept_prompts += 1
                 expected_rows += len(valid_variants) + 1
                 print(
-                    f"  [row {global_row_idx + 1}] kept: rows written for group={len(valid_variants) + 1}",
+                    f"  [row {original_idx + 1}] kept: rows written for group={len(valid_variants) + 1}",
                     flush=True,
                 )
 
-            if batch_end < total_rows and args.sleep_seconds > 0:
+            if batch_end < bounded_total and args.sleep_seconds > 0:
                 time.sleep(args.sleep_seconds)
 
     print("[done] Generation finished.", flush=True)
