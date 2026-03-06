@@ -132,6 +132,12 @@ def build_system_prompt(num_variants: int) -> str:
     return SYSTEM_PROMPT.replace("{n}", str(num_variants))
 
 
+def build_user_message(raw_prompt: str) -> str:
+    return f"""<input_prompt>
+{raw_prompt}
+</input_prompt>"""
+
+
 def parse_json_response(raw: str) -> dict:
     text = raw.strip()
     if text.startswith("```"):
@@ -148,10 +154,12 @@ def generate_variants_batch(
     prompts: list[str],
     num_variants: int,
 ) -> tuple[dict[int, list[str]], str]:
-    numbered = "\n".join(f'{i}. "{p}"' for i, p in enumerate(prompts))
+    numbered = "\n".join(
+        f"{i}.\n{build_user_message(p)}" for i, p in enumerate(prompts)
+    )
     user_message = (
         f"Generate {num_variants} transformed variant(s) for each of these "
-        f"{len(prompts)} prompt(s):\n\n{numbered}"
+        f"{len(prompts)} prompt(s). Each prompt is wrapped in input tags:\n\n{numbered}"
     )
 
     message = client.messages.create(
