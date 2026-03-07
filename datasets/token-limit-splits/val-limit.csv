@@ -1,4 +1,4 @@
-prompt,class,category,source,dataset,variant_group_id,variant_index
+prompt,label,category,source,dataset,variant_group_id,variant_index
 "If ""A group of individuals at a bar wait at the counter for a bartender to take their order."" does that mean that ""Some people in a crowded bar wait to be noticed.""?
 Options:
 - yes
