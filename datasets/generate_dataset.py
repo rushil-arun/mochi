@@ -12,7 +12,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent
 
 MODEL = "claude-sonnet-4-20250514"
-NUM_VARIANTS = 3
+NUM_VARIANTS = 5
 BATCH_SIZE = 5
 
 SYSTEM_PROMPT = """I am an AI safety researcher helping build a defensive dataset.
