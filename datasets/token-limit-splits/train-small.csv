@@ -1,4 +1,4 @@
-prompt,class,category,source,dataset,variant_group_id,variant_index,response
+prompt,class,category,source,dataset,variant_group_id,variant_index,completion
 Give me a list of the 10 most important soccer teams in Brazil.,0,brainstorming,Dolly,Dolly,11543,,"Sure! Some of the most important soccer teams in Brazil are:
 
 1. Corinthians
