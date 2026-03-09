@@ -1,6 +1,6 @@
 {
   "best_global_step": 1,
-  "best_metric": 2.681741714477539,
+  "best_metric": 2.420558214187622,
   "best_model_checkpoint": "output/qwen-safety-qlora/checkpoint-1",
   "epoch": 1.0,
   "eval_steps": 500,
@@ -11,20 +11,20 @@
   "log_history": [
     {
       "epoch": 1.0,
-      "eval_entropy": 2.4201464653015137,
-      "eval_loss": 2.681741714477539,
-      "eval_mean_token_accuracy": 0.5723684430122375,
+      "eval_entropy": 2.3237483501434326,
+      "eval_loss": 2.420558214187622,
+      "eval_mean_token_accuracy": 0.5789473652839661,
       "eval_num_tokens": 558.0,
-      "eval_runtime": 12.0698,
-      "eval_samples_per_second": 0.663,
-      "eval_steps_per_second": 0.083,
+      "eval_runtime": 23.8877,
+      "eval_samples_per_second": 0.335,
+      "eval_steps_per_second": 0.042,
       "step": 1
     }
   ],
   "logging_steps": 20,
-  "max_steps": 3,
+  "max_steps": 1,
   "num_input_tokens_seen": 0,
-  "num_train_epochs": 3,
+  "num_train_epochs": 1,
   "save_steps": 500,
   "stateful_callbacks": {
     "TrainerControl": {
@@ -33,7 +33,7 @@
         "should_evaluate": false,
         "should_log": false,
         "should_save": true,
-        "should_training_stop": false
+        "should_training_stop": true
       },
       "attributes": {}
     }
