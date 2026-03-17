@@ -16,12 +16,12 @@
 ## Table of Contents
 
 1. [Introduction](#1-introduction)
-2. [Datasets] (#2-datasets)
-3. [Model Architecture] (#3-model-architecture)
+2. [Datasets](#2-datasets)
+3. [Model Architecture](#3-model-architecture)
 4. [Model Downloads](#4-model-downloads)
 5. [How to Run Locally](#5-how-to-run-locally)
 6. [Evaluation Results](#6-evaluation-results)
-7. [Contributions] (#7-contributions)
+7. [Contributions](#7-contributions)
 8. [Citation](#8-citation)
 9. [Contact](#9-contact)
 
@@ -43,5 +43,5 @@ We present Mochi (**M**alicious **O**utput **C**uration for **H**igh-quality **I
 ## 8. Citation
 
 ## 9. Contact
-
+If you have any questions, please raise an issue on the repository.
 
