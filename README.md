@@ -7,7 +7,7 @@
 </div>
 <hr>
 <div align="center" style="line-height: 1;">
-  <a href="https://huggingface.co/SulKhu/Mochi"><img alt="Hugging Face"
+  <a href="https://huggingface.co/datasets/SulKhu/Mochi"><img alt="Hugging Face"
     src="https://img.shields.io/badge/Mochi-gray?logo=huggingface&label=HuggingFace&labelColor=yellow"/></a>
   <br>
   <a href=""><b>Paper Link (Coming Soon)</b>👁️</a>
