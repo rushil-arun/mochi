@@ -1,0 +1,17 @@
+torch
+transformers
+peft
+trl
+accelerate
+bitsandbytes  # 4-bit QLoRA training; needs an NVIDIA GPU
+datasets
+sentencepiece
+sentence-transformers
+scikit-learn
+pandas
+matplotlib
+tqdm
+anthropic
+python-dotenv
+huggingface_hub
+jupyter

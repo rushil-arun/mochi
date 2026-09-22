@@ -1,5 +1,6 @@
 import argparse
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -19,7 +20,6 @@ DEFAULT_CLAUDE_BATCH_SIZE = 50
 DEFAULT_GENERATION_BATCH_SIZE = 4
 DEFAULT_MAX_NEW_TOKENS = 32
 LABEL_COL_CANDIDATES = ("label", "class")
-ANTHROPIC_API_KEY = "API KEY"
 
 
 def log(message: str) -> None:
@@ -486,7 +486,7 @@ def save_predictions(
 
 def main() -> None:
     log("Starting evaluation script.")
-    load_dotenv()
+    load_dotenv(Path(__file__).resolve().parent.parent / ".env")
     args = parse_args()
     log(f"Parsed arguments for split '{args.split_name}'.")
 
@@ -531,9 +531,9 @@ def main() -> None:
     log(f"Tokenizer source: {tokenizer_source}")
     log(f"Claude classifier model: {args.claude_model}")
 
-    claude_api_key = ANTHROPIC_API_KEY
-    if not claude_api_key or claude_api_key == "API KEY":
-        log("Warning: replace ANTHROPIC_API_KEY in testing/evaluate_model.py with your real key before running.")
+    claude_api_key = os.getenv("ANTHROPIC_API_KEY")
+    if not claude_api_key:
+        raise SystemExit("ANTHROPIC_API_KEY is not set. Add it to a .env file in the repo root or export it.")
     else:
         log("Anthropic client configured.")
     claude_client = anthropic.Anthropic(api_key=claude_api_key)
